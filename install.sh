@@ -250,53 +250,57 @@ if [ -z "$1" ] || contains "$*" vzlogger; then
 	echo
 	echo "building and installing vzlogger"
     
-    if [ ! -d "$build_dir" ]; then
-        echo "creating folder $build_dir"
-        mkdir "$build_dir"
-    fi
+	if [ ! -d "$build_dir" ]; then
+		echo "creating folder $build_dir"
+	mkdir "$build_dir"
+	fi
     
-    pushd "$build_dir"
+	pushd "$build_dir"
 
-        if contains "$*" clean; then
-            echo "clearing cmake cache"
-            rm CMakeCache.txt
-        fi
+	if contains "$*" clean; then
+		echo "clearing cmake cache"
+		rm CMakeCache.txt
+	fi
 
-        echo
-        echo "building vzlogger"
-        cmake -DBUILD_TEST=off ..
-        make
+	echo
+	echo "building vzlogger"
+	cmake -DBUILD_TEST=off ..
+	make
 
-        echo
-        echo "installing vzlogger"
-        sudo make install
-        
-    popd
+	echo
+	echo "installing vzlogger"
+	sudo make install
 
-	if [ ! -e "$systemd_unit" ]; then
-		echo
-		echo "could not find $systemd_unit"
-		echo "it is recommended to configure a vzlogger systemd service"
-		echo
+	popd
 
-		read -p "add the systemd unit file? [y/N]" -n 1 -r
-		if [[ $REPLY =~ ^[Yy]$ ]]; then
+	if [ -n "$DOCKER_BUILD" ]; then
+		echo "Building container image. Skipping post-compile checks"
+	else
+		if [ ! -e "$systemd_unit" ]; then
 			echo
-			echo "installing systemd unit file"
-			sudo cp ./etc/vzlogger.service "$systemd_unit"
-			sudo sed -i "s|/etc/vzlogger.conf|$vzlogger_conf|g" "$systemd_unit"
+			echo "could not find $systemd_unit"
+			echo "it is recommended to configure a vzlogger systemd service"
+			echo
+
+			read -p "add the systemd unit file? [y/N]" -n 1 -r
+			if [[ $REPLY =~ ^[Yy]$ ]]; then
+				echo
+				echo "installing systemd unit file"
+				sudo cp ./etc/vzlogger.service "$systemd_unit"
+				sudo sed -i "s|/etc/vzlogger.conf|$vzlogger_conf|g" "$systemd_unit"
+			fi
 		fi
-	fi
 
-	if [ ! -e "$vzlogger_conf" ]; then
-		echo
-		echo "could not find global config file $vzlogger_conf"
-		echo "make sure to configure vzlogger before running (see etc/vzlogger.conf)"
-	fi
+		if [ ! -e "$vzlogger_conf" ]; then
+			echo
+			echo "could not find global config file $vzlogger_conf"
+			echo "make sure to configure vzlogger before running (see etc/vzlogger.conf)"
+		fi
 
-	if [ -n "$(pidof vzlogger)" ]; then
-		echo
-		echo "vzlogger is already running"
-		echo "make sure to restart vzlogger"
+		if [ -n "$(pidof vzlogger)" ]; then
+			echo
+			echo "vzlogger is already running"
+			echo "make sure to restart vzlogger"
+		fi
 	fi
 fi
